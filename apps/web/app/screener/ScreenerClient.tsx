@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import type { ScreenerResult, ScreenerMeta } from '../api/screener/route';
+import { SparklineChart } from '../components/charts';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -44,65 +45,7 @@ function confTextColor(v: number): string {
   return 'text-rose-400';
 }
 
-// ─── Sparkline Canvas ─────────────────────────────────────────
-
-function Sparkline({ prices, direction }: { prices: number[]; direction: 'BUY' | 'SELL' }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const data = prices.length >= 2 ? prices : generateFakePrices(prices[0] ?? 1, direction);
-    const w = canvas.width;
-    const h = canvas.height;
-
-    ctx.clearRect(0, 0, w, h);
-
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min || 1;
-    const pad = 2;
-
-    const points = data.map((p, i) => ({
-      x: pad + (i / (data.length - 1)) * (w - pad * 2),
-      y: h - pad - ((p - min) / range) * (h - pad * 2),
-    }));
-
-    const color = direction === 'BUY' ? '#10b981' : '#f43f5e';
-
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Fill area
-    ctx.lineTo(points[points.length - 1].x, h);
-    ctx.lineTo(points[0].x, h);
-    ctx.closePath();
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, `${color}30`);
-    grad.addColorStop(1, `${color}00`);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  }, [prices, direction]);
-
-  return <canvas ref={canvasRef} width={80} height={30} className="opacity-90" />;
-}
-
-function generateFakePrices(base: number, direction: 'BUY' | 'SELL'): number[] {
-  const trend = direction === 'BUY' ? 1 : -1;
-  return Array.from({ length: 20 }, (_, i) => {
-    const noise = (Math.random() - 0.5) * base * 0.01;
-    return base + trend * (i / 20) * base * 0.02 + noise;
-  });
-}
+// ─── Sparkline (lightweight-charts) ──────────────────────────
 
 // ─── Sort Icon ────────────────────────────────────────────────
 
@@ -239,12 +182,14 @@ function FilterPill<T extends string>({
 
 // ─── Skeleton Row ─────────────────────────────────────────────
 
+const SKELETON_WIDTHS = Array.from({ length: 8 }, () => Math.floor(40 + Math.random() * 40));
+
 function SkeletonRow() {
   return (
     <tr className="border-b border-[var(--border)]">
-      {Array.from({ length: 8 }).map((_, i) => (
+      {SKELETON_WIDTHS.map((w, i) => (
         <td key={i} className="px-4 py-3">
-          <div className="h-4 bg-[var(--glass-bg)] rounded animate-pulse" style={{ width: `${40 + Math.random() * 40}%` }} />
+          <div className="h-4 bg-[var(--glass-bg)] rounded animate-pulse" style={{ width: `${w}%` }} />
         </td>
       ))}
     </tr>
@@ -372,6 +317,10 @@ export default function ScreenerClient() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 py-6 pb-24 md:pb-8">
+        <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-300">
+          <strong>Live Data</strong> — Real-time market data from Binance and Yahoo Finance.
+        </div>
+
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
@@ -675,7 +624,7 @@ export default function ScreenerClient() {
 
                     {/* Sparkline */}
                     <td className="px-4 py-3">
-                      <Sparkline prices={r.sparkline} direction={r.direction} />
+                      <SparklineChart prices={r.sparkline} direction={r.direction} />
                     </td>
 
                     {/* Timeframe */}

@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { getSignals } from '../../lib/signals';
+import { getTrackedSignals } from '../../../lib/tracked-signals';
 import { SignalShareButtons } from '../../components/signal-share-buttons';
 import { EmbedButton } from '../../components/embed-button';
 import { AIAnalysisPanel } from '../../components/ai-analysis-panel';
 import { SetAlertButton } from '../../components/set-alert-button';
+import { SignalChartSection } from './SignalChartSection';
 
 function formatPrice(p: number): string {
   if (p >= 1000) return p.toFixed(2);
@@ -58,7 +59,7 @@ export default async function SignalPage(
 
   if (direction !== 'BUY' && direction !== 'SELL') notFound();
 
-  const { signals } = await getSignals({ symbol, timeframe, direction });
+  const { signals } = await getTrackedSignals({ symbol, timeframe, direction });
   if (signals.length === 0) notFound();
 
   const signal = signals[0];
@@ -260,6 +261,17 @@ export default async function SignalPage(
             </span>
           </div>
         </div>
+
+        {/* Price Chart */}
+        <SignalChartSection
+          entry={signal.entry}
+          stopLoss={signal.stopLoss}
+          takeProfit1={signal.takeProfit1}
+          takeProfit2={signal.takeProfit2}
+          takeProfit3={signal.takeProfit3}
+          direction={signal.direction}
+          timestamp={signal.timestamp}
+        />
 
         {/* AI Analysis Panel */}
         <AIAnalysisPanel symbol={signal.symbol} timeframe={signal.timeframe} />

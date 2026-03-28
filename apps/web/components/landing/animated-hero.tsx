@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatedChartHero } from "../animated-chart-hero";
 
 const GITHUB_URL = "https://github.com/naimkatiman/tradeclaw";
 
@@ -40,7 +41,10 @@ export function AnimatedHero() {
 
   return (
     <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-6 pt-28 pb-16 text-center">
-      {/* Grid dot background */}
+      {/* Canvas chart animation — full bleed background */}
+      <AnimatedChartHero className="absolute inset-0 w-full h-full" />
+
+      {/* Grid dot overlay */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -50,10 +54,12 @@ export function AnimatedHero() {
         }}
       />
 
+      {/* Dark vignette so text stays readable */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#050505]/60 via-transparent to-[#050505]/80" />
+
       {/* Ambient glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[800px] rounded-full bg-emerald-500/5 blur-[160px]" />
-        <div className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] rounded-full bg-emerald-500/3 blur-[100px]" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-emerald-500/5 blur-[140px]" />
       </div>
 
       <div className="relative z-10 mx-auto max-w-4xl">
@@ -133,6 +139,15 @@ export function AnimatedHero() {
               </span>
             )}
           </a>
+          <Link
+            href="/star"
+            className="flex items-center gap-2 rounded-full border border-yellow-400/20 bg-yellow-400/5 px-7 py-3 text-sm font-semibold text-yellow-400 transition-all duration-200 hover:border-yellow-400/30 hover:bg-yellow-400/10 active:scale-[0.98]"
+          >
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            Star on GitHub
+          </Link>
         </div>
 
         {/* Trust badges */}

@@ -1,34 +1,115 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { Handshake, Rocket, Star, Sparkles, Circle, Radio, Play, Thermometer, ChevronDown, Mail, Activity, Hash, Heart, Users, Clock, HelpCircle } from 'lucide-react';
+import { ThemeToggle } from './theme-toggle';
+import type { LucideIcon } from 'lucide-react';
 
-const NAV_LINKS = [
-  { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "/compare", label: "Compare" },
-  { href: "/awesome", label: "Awesome" },
-  { href: "/contribute", label: "Contribute 🤝" },
-  { href: "/launch", label: "Launch 🚀" },
-  { href: "/share", label: "Share ⭐" },
-  { href: "/stars", label: "Stars 🌟" },
-  { href: "/hn", label: "HN 🟠" },
-  { href: "/rss", label: "RSS 📡" },
-  { href: "/demo", label: "Demo 🟢" },
-  { href: "/replay", label: "Replay ▶" },
-  { href: "/dashboard", label: "Dashboard" },
+interface NavLink {
+  href: string;
+  label: string;
+  icon?: LucideIcon;
+}
+
+const PRIMARY_LINKS: NavLink[] = [
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/screener', label: 'Signals' },
+  { href: '/demo', label: 'Live Demo' },
+  { href: '/backtest', label: 'Backtest' },
+  { href: '/api-docs', label: 'API Docs' },
+  { href: '/compare', label: 'Compare' },
+];
+
+interface DropdownGroup {
+  label: string;
+  links: NavLink[];
+}
+
+const MORE_GROUPS: DropdownGroup[] = [
+  {
+    label: 'Trading',
+    links: [
+      { href: '/how-it-works', label: 'How It Works' },
+      { href: '/heatmap', label: 'Heatmap', icon: Thermometer },
+      { href: '/multi-timeframe', label: 'Multi-Timeframe' },
+      { href: '/paper-trading', label: 'Paper Trading' },
+      { href: '/replay', label: 'Replay', icon: Play },
+      { href: '/correlation', label: 'Correlation' },
+      { href: '/alerts', label: 'Alerts' },
+      { href: '/accuracy', label: 'Accuracy' },
+      { href: '/calibration', label: 'Calibration' },
+    ],
+  },
+  {
+    label: 'Tools',
+    links: [
+      { href: '/strategy-builder', label: 'Strategy Builder' },
+      { href: '/plugins', label: 'Plugins' },
+      { href: '/badge', label: 'Badges Gallery' },
+      { href: '/marketplace', label: 'Marketplace' },
+      { href: '/api-keys', label: 'API Keys' },
+      { href: '/status', label: 'Status', icon: Activity },
+    ],
+  },
+  {
+    label: 'Community',
+    links: [
+      { href: '/blog', label: 'Blog' },
+      { href: '/showcase', label: 'Showcase', icon: Users },
+      { href: '/contribute', label: 'Contribute', icon: Handshake },
+      { href: '/sponsor', label: 'Sponsor', icon: Heart },
+      { href: '/awesome', label: 'Awesome Lists' },
+      { href: '/card', label: 'Signal Card' },
+      { href: '/playground', label: 'Playground' },
+      { href: '/email-digest', label: 'Email Digest', icon: Mail },
+      { href: '/slack', label: 'Slack', icon: Hash },
+      { href: '/threads', label: 'Tweet Threads' },
+      { href: '/share', label: 'Share', icon: Star },
+      { href: '/star', label: 'Star Us', icon: Star },
+      { href: '/stars', label: 'Stars', icon: Sparkles },
+      { href: '/hn', label: 'HN', icon: Circle },
+      { href: '/rss', label: 'RSS', icon: Radio },
+      { href: '/waitlist', label: 'Waitlist', icon: Clock },
+      { href: '/launch', label: 'Launch', icon: Rocket },
+      { href: '/vs-tradingview', label: 'vs TradingView' },
+      { href: '/quiz', label: 'Trader Quiz', icon: HelpCircle },
+    ],
+  },
+];
+
+// Flat list of all links for the mobile hamburger overlay
+const ALL_NAV_LINKS: NavLink[] = [
+  ...PRIMARY_LINKS,
+  ...MORE_GROUPS.flatMap((g) => g.links),
+  { href: '#features', label: 'Features' },
+  { href: '#how-it-works', label: 'How it works' },
 ];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 24);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close "More" dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    if (moreOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [moreOpen]);
 
   return (
     <>
@@ -69,23 +150,65 @@ export function Navbar() {
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-3 text-xs font-medium text-[var(--text-secondary)]">
-            {NAV_LINKS.map((link) => (
+          <div className="hidden md:flex items-center gap-6 text-xs font-medium text-[var(--text-secondary)]">
+            {PRIMARY_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="hover:text-[var(--foreground)] transition-colors duration-300"
+                className="hover:text-[var(--foreground)] transition-colors duration-300 flex items-center gap-1.5"
               >
+                {link.label === 'Live Demo' && (
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                  </span>
+                )}
                 {link.label}
               </Link>
             ))}
+
+            {/* More dropdown */}
+            <div ref={moreRef} className="relative">
+              <button
+                onClick={() => setMoreOpen(!moreOpen)}
+                className="flex items-center gap-1 hover:text-[var(--foreground)] transition-colors duration-300"
+              >
+                More
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${moreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {moreOpen && (
+                <div className="absolute top-full right-0 mt-3 w-[520px] rounded-2xl border border-[var(--border)] backdrop-blur-2xl bg-[var(--background)] shadow-2xl shadow-black/40 p-6 grid grid-cols-3 gap-6">
+                  {MORE_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <span className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)] font-semibold mb-3 block opacity-60">
+                        {group.label}
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        {group.links.map((link) => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            onClick={() => setMoreOpen(false)}
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg text-[11px] text-[var(--text-secondary)] hover:text-[var(--foreground)] hover:bg-[var(--foreground)]/[0.04] transition-all duration-200"
+                          >
+                            {link.icon && <link.icon className="w-3.5 h-3.5 opacity-60" />}
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* CTA */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/dashboard"
-              className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors duration-300"
+              className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors duration-300"
             >
               Live signals
             </Link>
@@ -93,7 +216,7 @@ export function Navbar() {
               href="https://github.com/naimkatiman/tradeclaw"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-full bg-white/90 px-4 py-1.5 text-xs font-semibold text-black hover:bg-white transition-all duration-300 active:scale-[0.98]"
+              className="flex items-center gap-1.5 rounded-full bg-[var(--foreground)] text-[var(--background)] px-4 py-1.5 text-xs font-semibold hover:opacity-90 transition-all duration-300 active:scale-[0.98]"
             >
               <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
@@ -133,20 +256,18 @@ export function Navbar() {
       {/* Mobile menu overlay */}
       {menuOpen && (
         <div
-          className="fixed inset-0 z-40 backdrop-blur-2xl bg-[var(--background)]/90 flex flex-col items-center justify-center gap-8"
+          className="fixed inset-0 z-40 backdrop-blur-2xl bg-[var(--background)]/90 flex flex-col items-center justify-center gap-6"
           onClick={() => setMenuOpen(false)}
         >
-          {NAV_LINKS.map((link, i) => (
+          {ALL_NAV_LINKS.map((link, i) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-2xl font-semibold text-[var(--foreground)] opacity-0 animate-fade-up"
-              style={{
-                animationDelay: `${i * 60}ms`,
-                animationFillMode: "forwards",
-              }}
+              className="flex items-center gap-3 text-2xl font-semibold text-[var(--foreground)] opacity-0 animate-fade-up"
+              style={{ animationDelay: `${i * 40}ms`, animationFillMode: 'forwards' }}
               onClick={() => setMenuOpen(false)}
             >
+              {link.icon && <link.icon className="w-6 h-6 opacity-60" />}
               {link.label}
             </Link>
           ))}

@@ -1,5 +1,5 @@
 project: tradeclaw
-updated: 2026-03-21T20:00:00+08:00
+updated: 2026-03-28T14:30:00+08:00
 
 description: >
   Open source self-hostable AI trading agent platform.
@@ -540,28 +540,480 @@ tasks:
 
   - id: TC-050
     title: "Public API key system — generate free API keys, rate-limited, for external developers"
-    status: in-progress
+    status: done
     owner: pm-tradeclaw
-    notes: "Started 2026-03-28."
+    notes: >
+      Complete: apps/web/lib/api-keys.ts (generateApiKey/CRUD/rate-limiting/seed data),
+      4 API routes (POST/GET /api/keys, validate/usage/revoke per key), /api-keys page
+      (hero, create form, key reveal, my-keys lookup, code examples: curl/JS/Python),
+      /developer page (DeveloperClient.tsx), navbar updated, api-docs updated with auth section.
+      Build passes. Committed 4806bd62. 2026-03-28
 
   - id: TC-051
     title: "TradeClaw badge — dynamic SVG badge showing live BTC signal for embedding in any README"
-    status: pending
+    status: done
     owner: pm-tradeclaw
-    notes: ""
+    notes: >
+      Complete: badge-cache.ts (5-min TTL), /api/badge/[pair]/json (shields.io JSON endpoint),
+      /badges gallery page with Markdown/HTML/RST/AsciiDoc snippets for all 10 pairs + live previews.
+      Navbar + mobile-nav updated. README Live Signal Badges section added. Build passes. 2026-03-28
 
   - id: TC-052
     title: "Signal webhook marketplace — gallery of community webhook integrations (Notion/Airtable/Zapier)"
-    status: pending
+    status: done
     owner: pm-tradeclaw
-    notes: ""
+    notes: >
+      Complete: 12 integrations (Notion, Airtable, Zapier, Make, Google Sheets, Discord, Slack,
+      PagerDuty, Telegram, n8n, IFTTT, Pipedream). /marketplace page with category filters, search,
+      InstallModal with step-by-step guide + payload preview + test connection. GET /api/marketplace
+      returns integration list as JSON. Navbar + mobile-nav updated. 2026-03-28
 
   - id: TC-053
     title: "Animated landing page hero — Three.js/canvas particle chart animation for wow-factor"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: animated-chart-hero.tsx rewritten (350+ lines). Dual price lines (emerald + purple)
+      with bezier-smooth curves, gradient fills, glowing tips with pulse rings. 65 particles in
+      three colors (emerald/purple/white) with proximity connection lines. Floating signal badges
+      (130x44 rounded cards with BUY/SELL, symbol, price, confidence bar). Sparkle burst system
+      on new signal spawn. prefers-reduced-motion respected. will-change: transform. Build passes
+      101 pages. Committed b3de743b. 2026-03-28
+
+  # ── Phase 11: Star Acceleration + Developer Credibility ──
+
+  - id: TC-054
+    title: "GitHub trending optimization — perfect repo metadata, topics, About section, social preview"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: Description updated with emoji + keywords. 20 topics (maxed: finance, rsi, macd added).
+      CITATION.cff created for academic discovery. welcome.yml GH Action (welcome first-time contributors + CTA to star).
+      star-milestone.yml GH Action (auto-issue at 10/25/50/100/500/1000 stars). social-preview.svg (1280x640).
+      Committed d40f10fd. 2026-03-28
+
+  - id: TC-055
+    title: "Signal accuracy leaderboard public API — /api/v1 RESTful endpoint with OpenAPI, showcase on landing"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /api/v1 (index with endpoint docs + examples), /api/v1/signals (filtered, CORS),
+      /api/v1/leaderboard (sorted by hitRate/totalSignals/avgConfidence), /api/v1/health,
+      /api/v1/badge/[pair] (shields.io JSON format). 5 new dynamic routes. Build passes 105 pages.
+      Committed a3ea644c. 2026-03-28
+
+  - id: TC-056
+    title: "TradeClaw CLI tool — npx tradeclaw <command> for signal fetch, backtest, strategy commands in terminal"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: packages/tradeclaw-cli/ — bin/cli.js + lib/index.js + package.json + README.md.
+      Commands: signals (--pair/--direction/--timeframe/--limit), leaderboard (--period), health, badge <PAIR>, version, help.
+      Colored terminal output (picocolors), spinner, formatted table with confidence bars.
+      README updated with npx tradeclaw examples. Build passes 105 pages. Committed 5332afee. 2026-03-28
+
+  - id: TC-057
+    title: "Video demo script + auto-generated GIF — ffmpeg terminal demo recording embedded in README"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: apps/web/public/demo-terminal.svg (800x480, animated typewriter terminal showing
+      npx tradeclaw signals with BUY/SELL colored rows), apps/web/public/demo-dashboard.svg
+      (900x500, signal cards sliding in with confidence bars, live stats), docs/demo/RECORDING_GUIDE.md.
+      README updated with SVG embeds. Build passes. Committed 3d5fd129. 2026-03-28
+
+  - id: TC-058
+    title: "Referral star campaign page — /star page with viral loop: share → get notified at 100/500/1000 milestones"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /star page (StarClient.tsx) — hero with live star counter + progress bar,
+      milestone rewards table (100/250/500/1000 ⭐ feature pledges), share kit (Twitter/LinkedIn/
+      Reddit/Discord pre-written posts with copy+share), email notify (/api/star-notify, dedup JSON),
+      README badge section. Landing page hero got "Star on GitHub" CTA. README "Support the Project"
+      section added. Build passes. Committed e1acdfd1. 2026-03-28
+
+  # ── Phase 12: Sustained Growth + Ecosystem ──
+
+  - id: TC-059-B
+    title: "Real-time global signal heatmap — world map showing which assets are trending BUY/SELL"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /api/heatmap endpoint (H1 signals for 10 pairs), /heatmap page with HeatmapClient.tsx.
+      CSS grid (2/3/4/5 col responsive), asset cards with emerald/rose/zinc color coding, confidence
+      bars, auto-refresh 30s, summary stats bar, click-through to signal detail. Build passes.
+      Committed + pushed 2026-03-28.
+
+  - id: TC-060
+    title: "TradeClaw vs TradingView live comparison — side-by-side signal output for same asset same time"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /vs-tradingview page (VsClient.tsx, 488 lines) — side-by-side live comparison,
+      TradingView raw indicator cards vs TradeClaw AI decision card, asset/timeframe selectors,
+      comparison table, share button, auto-refresh 60s. Already in navbar. Build passes 107 pages.
+      2026-03-28
+
+  - id: TC-061
+    title: "GitHub Discussions seeding — post 10 thoughtful discussion threads to bootstrap community"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: 10 GitHub Discussions created via GraphQL API (discussions/22–31).
+      Categories: General (3), Q&A (2), Ideas (3), Show and tell (2).
+      Topics: Welcome/intro, Show your setup, Telegram alerts FAQ, Feature requests,
+      Self-hosting FAQ, Broker integrations wishlist, 2026 Roadmap, API code snippets,
+      Asset expansion poll, Signal accuracy methodology. 2026-03-28
+
+  - id: TC-062
+    title: "Landing page A/B hero variants — 3 different hero messages, track which gets more GitHub clicks"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: components/landing/ab-hero.tsx (3 variants: A=original, B=developer-focused,
+      C=trader-focused). localStorage variant assignment, impression+click tracking, CTR calculation.
+      /ab-stats page (ABStatsClient.tsx) — per-variant stats, CTR bars, WINNING badge, force-variant
+      button, reset. Landing page (app/page.tsx) swapped from AnimatedHero to ABHero.
+      window.__tcABStats() in devtools. Build passes 108 pages. Committed 317dcb15. 2026-03-28
+
+  - id: TC-063
+    title: "npx tradeclaw-demo enhancement — add web UI flag, auto-open browser, show live signal feed"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: bin/cli.js enhanced with --port/-p, --no-open, --help/-h flags. lib/server.js
+      rewritten: opts param (port+noOpen), SSE endpoint /api/signals/stream (live 5s push),
+      /api/health endpoint, broadcastSignals() to all connected SSE clients, terminal live
+      signal ticker every 5s with colored BUY/SELL arrows. demo-page.js: connectStream() adds
+      EventSource SSE with fallback to polling, live-dot flash on new signal. Version bumped to
+      0.2.0. 2026-03-28
+
+  - id: TC-059
+    title: "Profitability research — can users make money by following TradeClaw signals?"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: docs/SIGNAL_PROFITABILITY_RESEARCH.md added 2026-03-28. Reviewed FCA, CFTC,
+      SEC/Investor.gov and academic social-trading literature. Conclusion: cannot honestly claim
+      users will make money from following signals. Repo audit found signal-history seed data is
+      simulated and recordSignal() is not yet wired into live signal generation, so there is no
+      audited live follower P&L track record yet.
+
+  - id: TC-060-B
+    title: "Signal engine quality pass — stricter regime filters, smarter stops, parallel timeframe generation"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: strengthened apps/web/app/lib/signal-generator.ts on 2026-03-28 with market-quality
+      gating (ATR%, Bollinger bandwidth, EMA slope/trend-strength, MACD confirmation), tighter
+      confidence calibration, nearest support/resistance selection, and risk-distance guards to skip
+      weak or cramped setups. Fixed stop-loss selection bug so BUY/SELL stops prefer the closer valid
+      swing/ATR level instead of the farther one. Improved apps/web/app/lib/signals.ts by generating
+      requested timeframes in parallel. Verified with npm run build (passed outside sandbox due
+      Next/Google Fonts fetch requirement).
+
+  - id: TC-061-B
+    title: "Audited live signal tracking — persist emitted real signals and refresh leaderboard outcomes automatically"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: added apps/web/lib/tracked-signals.ts on 2026-03-28 as a server-only wrapper around
+      getSignals() that records emitted live signals into apps/web/lib/signal-history.ts using stable
+      candle-timestamp-based IDs. Updated dashboard and key API/OG/badge/screener/telegram/signal
+      routes to use tracked signal retrieval so real records are persisted once and deduplicated.
+      Leaderboard APIs now call resolveRealOutcomes() before computing stats, so accuracy pages and
+      performance summaries refresh without depending on /api/signals/history. npm run build passes.
+
+  # ── Phase 13: Polish + Quality ──
+
+  - id: TC-064
+    title: "Replace all emoji icons with Lucide React across UI files"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: Replaced emoji icons with Lucide React components in ab-hero.tsx, StarClient.tsx,
+      star/page.tsx, ShareClient.tsx, cta.tsx, launch/page.tsx, ai-analysis-panel.tsx.
+      Remaining emojis in social media post text (tweets, LinkedIn) are intentional.
+      Build passes 108 pages. 2026-03-28
+
+  - id: TC-065
+    title: "Navbar restructure — group 20+ links into categorized dropdown menus"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: Desktop navbar reduced to 5-6 primary links + "More" dropdown with Trading/Tools/Community
+      groups. Mobile nav slide-up sheet reorganized into sectioned categories with headers.
+      All routes preserved. Build passes 108 pages. 2026-03-28
+
+next_actions:
+  - "TC-069/070/071 done. Phase 14 in progress. Next: define Phase 15 viral tasks."
+  - "If profitability claims are needed later, build audited forward-performance tracking for live signals."
+  - "Replace seed-heavy accuracy UX with live-only metrics once enough tracked signal records accumulate."
+  - "Add test suite (currently zero tests for 108+ pages)."
+  - "Migrate file-based JSON storage to PostgreSQL for production self-hosters."
+  - "Deploy live demo instance and validate Docker Compose end-to-end."
+
+  # ── Phase 13: Distribution + Developer Ecosystem ──
+
+  - id: TC-064
+    title: "GitHub Actions star-triggered social post — auto-tweet/post when milestone stars hit"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: .github/workflows/star-milestone-social.yml — workflow_dispatch with simulate_stars
+      input, job summary with pre-written tweets/Reddit/Discord embeds, milestone issue creator
+      with social post kit. docs/star-milestone-workflow.md for webhook extension guide.
+      Committed 32ed40a3. 2026-03-28
+
+  - id: TC-065
+    title: "TradeClaw MCP server — Model Context Protocol server so AI assistants can fetch live signals"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: packages/tradeclaw-mcp/ — bin/server.js (stdio MCP entry, --base-url/--help flags),
+      lib/index.js (4 MCP tools: get_signals, get_leaderboard, get_health, explain_signal),
+      lib/tradeclaw-client.js (fetch wrapper for /api/v1 endpoints), package.json, README.md.
+      README.md updated with Option 3 MCP config snippet for Claude Desktop. All tools return
+      rich markdown. Supports TRADECLAW_BASE_URL env for self-hosted instances. 2026-03-28
+
+  - id: TC-066
+    title: "Landing page performance score — Lighthouse 100 optimization, sub-1s LCP, Core Web Vitals green"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: next.config.ts hardened with compress:true, avif/webp image formats, security headers
+      (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy), aggressive
+      static asset cache headers (1yr for images/fonts), SSE stream no-buffering header,
+      removeConsole in production, optimizePackageImports for lucide-react. Build passes 114 pages.
+      Committed 32ed40a3. 2026-03-28
+
+  - id: TC-067
+    title: "Signal confidence calibration page — /calibration shows if 80% confidence signals win 80% of time"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /calibration page (CalibrationClient.tsx) — canvas calibration curve chart (bars=actual
+      win rate, lines=expected), bucket breakdown table with error deltas, Brier score, ECE metric,
+      explainer card, simulated-data warning when < 20 live signals. /api/calibration endpoint (5-min
+      cache, readHistory(), Pearson calibration math). Added to navbar + mobile nav. Build passes
+      114 pages. Committed 32ed40a3. 2026-03-28
+
+  - id: TC-068
+    title: "Dev.to / Hashnode viral article — 'I built an open-source AI trading signal platform in 7 days'"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: docs/devto-article.md — 1200-word article covering signal engine math, no-database
+      architecture, plugin system, MCP integration, npx viral hooks. Covers tech stack (Next.js/TS),
+      code snippets (scoring algo, synthetic fallback, plugin API), honest disclaimer on accuracy.
+      Ready to submit to Dev.to/Hashnode/Medium. Tags: opensource, trading, nextjs, typescript,
+      selfhosted. 2026-03-28
+
+  # ── Phase 14: Star Velocity + Viral Hooks ──
+
+  - id: TC-069
+    title: "Interactive live demo embed on tradeclaw.win — embed dashboard widget on landing page for wow factor"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: LiveDemoEmbed component (apps/web/components/landing/live-demo-embed.tsx, 230+ lines).
+      Browser chrome frame with fake URL bar. Three sparkline charts (BTC/ETH/XAU) with real-time
+      price simulation + gradient fills + glowing tip dot. 4 live signal cards auto-refreshing 30s
+      from /api/signals. Confidence bars with color coding. Sub-CTAs: embed, RSS, API key, Telegram.
+      Added to landing page above LiveDemoSection. Build passes. Committed 8fbd427e. 2026-03-28
+
+  - id: TC-070
+    title: "GitHub README animated GIF — replace SVG placeholders with better demo content"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: demo-signals-animated.svg (800x440) — 4 signal cards (BTCUSD BUY 87%, XAUUSD SELL 74%,
+      ETHUSD BUY 91%, EURUSD SELL 68%) with staggered fadeUp animations, SVG animate confidence bars
+      filling in, TP/SL levels, indicator reference footer. demo-dashboard-animated.svg (900x500) —
+      full dashboard with stat cards, animated EMA chart line drawing, 4-signal panel, live dot pulse.
+      README updated with '🎬 See It In Action' section embedding demo-signals-animated.svg.
+      Committed 8fbd427e. 2026-03-28
+
+  - id: TC-071
+    title: "One-liner Docker test script — verify docker compose up works end-to-end with health check"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: scripts/test-docker.sh (bash, 180 lines) — prerequisites (docker/compose/compose.yml),
+      docker compose up --build with live output, 90s health polling with dot progress, 5 API checks
+      (/api/health JSON, /api/signals array, /api/v1/health, homepage 200, dashboard 200), PASS/FAIL
+      per check with color, PASS_COUNT/FAIL_COUNT summary, cleanup trap on exit, ⭐ CTA on success.
+      CLEANUP=false env var for CI use. .github/workflows/docker-test.yml added for CI on
+      Dockerfile/docker-compose changes. Build passes. Committed 8fbd427e. 2026-03-28
+
+  - id: TC-072
+    title: "Signal engine transparency page — /how-it-works with exact scoring formula, code snippets, live example"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /how-it-works page (HowItWorksClient.tsx) — 5-step pipeline diagram,
+      indicator weight bars (RSI 20pts / MACD 20pts / EMA 20pts / BB 15pts / Stoch 15pts),
+      exact scoring formula TypeScript code block, RSI Wilder implementation code,
+      TP/SL swing-high/low logic code, data sources (Binance/Yahoo/synthetic), disclaimer.
+      Copy-to-clipboard code blocks. Added to navbar. Build passes 115 pages. 2026-03-28
+
+  - id: TC-073
+    title: "SEO blog — /blog with 3 posts: 'RSI explained', 'How we score signals', 'Self-hosting trading tools'"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /blog index + 3 SEO-optimised articles: /blog/rsi-explained (Wilder formula,
+      TypeScript code, scoring table), /blog/how-we-score-signals (full algorithm walkthrough,
+      quality gates, calibration), /blog/self-hosting-trading-tools (cost comparison, 3 setup
+      options). All with metadata, og:tags, keywords. Blog added to navbar Community group.
+      Build passes 119 pages. Committed 7043fcfc. 2026-03-28
+
+  # ── Phase 15: Maximum Viral Distribution ──
+
+  - id: TC-074
+    title: "GitHub star velocity page — /stargazers shows live star growth chart + shareable milestone badges"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Covered by existing /stars page (StarsClient.tsx, TC-058). Live star counter, milestone progress, confetti, share kit. 2026-03-28"
+
+  - id: TC-075
+    title: "CodeSandbox / StackBlitz one-click playground — run TradeClaw signal engine in browser without cloning"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /playground page (PlaygroundClient.tsx) — 3 runnable examples (Signal Engine Core,
+      MACD Calculator, Bollinger Bands) with syntax-highlighted display, copy button, StackBlitz
+      one-click launch, CodeSandbox link, CLI snippet, docs link, star CTA. No install needed.
+      Added to Community navbar. Build passes. Committed b16e4492. 2026-03-28
+
+  - id: TC-076
+    title: "Signal digest email template — beautiful HTML email showing weekly top signals (copy-paste ready for newsletters)"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      email-digest.ts generates Gmail-compatible dark-theme HTML with top signals, accuracy stats, leaderboard.
+      GET /api/email-digest returns HTML or JSON. /email-digest preview page with copy/download.
+      Added to Community navbar with Mail icon. Build passes. 2026-03-28
+
+  - id: TC-077
+    title: "Awesome-quant PR submission — open actual PR to awesome-quant and awesome-selfhosted with TradeClaw entry"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: PR#300 opened to wilsonfreitas/awesome-quant (TradeClaw in JavaScript section, OPEN).
+      PR#2234 opened to awesome-selfhosted/awesome-selfhosted-data (software/tradeclaw.yml, OPEN).
+      docs/awesome-lists/SUBMISSION_STATUS.md created. Committed 9cebc81b. 2026-03-28
+
+  # ── Phase 16: Star Velocity + Credibility ──
+
+  - id: TC-079
+    title: "README social proof upgrade — contributor avatars grid, language badges, and 'Built with' tech stack section"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Added: code-size + discussions badges, flat-square tech stack badge row, 3-bullet 'Why TradeClaw?' skim section, Tech Stack table, Contributors section with contrib.rocks. Star history already existed."
+    notes: ""
+
+  - id: TC-080
+    title: "TradeClaw status page — /status shows uptime, last signal time, API health, version, and incident history"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /status page (StatusClient.tsx) with overall system status banner, 4 service cards
+      (Signal Engine, API, Database, SSE Feed) with response times, 90-day uptime history dots,
+      3 seeded resolved incidents, email subscribe (localStorage), auto-refresh 30s.
+      /api/status route. Navbar + mobile-nav updated. README status badge added.
+      Build passes. Committed 8cb83194. 2026-03-28
+
+  - id: TC-081
+    title: "Signal alert Slack app — /api/slack/webhook endpoint + one-click Slack install button + docs"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Slack integration: lib/slack-integration.ts (CRUD+Block Kit+broadcast), /api/slack/webhook (6 actions), /slack page (hero+form+list+code example), navbar+mobile-nav links, README updated. Build passes."
+
+  - id: TC-082
+    title: "Localization landing page — Spanish + Chinese hero section variants for international GitHub discovery"
+    status: done
+    owner: pm-tradeclaw
+    notes: "translations.ts (EN/ES/ZH typed keys), locale-switcher.tsx (EN|ES|中文 pill), localized-landing.tsx (shared component), /es page (og:locale=es_ES), /zh page (og:locale=zh_CN), sitemap updated, hreflang alternates in layout. Build passes."
+    notes: ""
+
+  - id: TC-083
+    title: "GitHub sponsor page + /sponsor — OSS sustainability page with tiers, goals, and roadmap unlocks"
+    status: done
+    owner: pm-tradeclaw
+    notes: "SponsorClient.tsx (hero, 4 tiers, roadmap milestones, sponsor wall, OSS stats, why-sponsor, share buttons, footer CTA). FUNDING.yml updated with ko_fi + buy_me_a_coffee. /sponsor in navbar Community group + mobile nav More section. README sponsor badge + link in Support section. Build passes."
+
+  - id: TC-078
+    title: "TradeClaw social card generator — /card page creates a personalized image (your name + fav pair signal) to share"
+    status: done
+    owner: pm-tradeclaw
+    notes: >
+      Complete: /card page (CardClient.tsx, 380+ lines) — Canvas 1200x630 PNG generator with
+      personalized name, live signal fetch, BUY/SELL badge with glow, confidence bar, RSI,
+      metadata grid, star CTA. Controls: name, 8 pairs, 3 TFs, refresh. Actions: Download PNG,
+      Share on X, Copy to clipboard. Added to Community navbar. Build passes. Committed b16e4492. 2026-03-28
+
+  # ── Phase 17: First-Impression & Distribution Blitz ──
+
+  - id: TC-084
+    title: "Stunning /showcase page — real-world use cases with mock screenshots, testimonials, and 'Deploy yours' CTAs"
+    status: done
+    owner: pm-tradeclaw
+    notes: "ShowcaseClient.tsx (3 trader use cases, live signal feed, tech stack grid, deploy CTA). Fixed api/v1/route.ts syntax. Committed e70ca419. 2026-03-28"
+
+  - id: TC-085
+    title: "README overhaul — one hero GIF at top (use demo-signals-animated.svg), tighten to 120 lines, killer first 10 lines"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Rewrote README to 96 clean lines. Hero animated SVG, badge row, 3 quick start options, features table, comparison table, CTA. Committed 0ff96262. 2026-03-28"
+
+  - id: TC-086
+    title: "/api/v2 SDK — publish tradeclaw-js npm package (fetch signals, leaderboard, health) so devs can npm install tradeclaw"
+    status: done
+    owner: pm-tradeclaw
+    notes: "packages/tradeclaw-js — TradeclawClient class, full TypeScript types, signals/leaderboard/health/badge methods. npm install tradeclaw-js. Committed f6df66f6. 2026-03-28"
+
+  - id: TC-087
+    title: "Viral tweet thread asset pack — /threads page with 7-tweet breakdown of TradeClaw architecture + copy buttons"
+    status: done
+    owner: pm-tradeclaw
+    notes: "4 thread templates (architecture/self-hosting/signals/launch), 7 tweets each, copy + tweet buttons. Committed 4c1d2a6f. 2026-03-28"
+
+  - id: TC-088
+    title: "Landing page above-the-fold score — hero shows LIVE signal data (pair + direction + confidence) fetched from /api/signals on server side for instant wow"
+    status: done
+    owner: pm-tradeclaw
+    notes: "LiveHeroSignals server component — fetches real signals at page render, ISR 60s revalidate. Live signal strip below hero with confidence bars + direction badges. Committed 2033a945. 2026-03-28"
+
+  # ── Phase 18: Viral Hooks + Community Conversion ──
+
+  - id: TC-089
+    title: "Waitlist + launch announcement page — /waitlist with email capture, countdown timer, and referral loop so early visitors become advocates"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Already implemented. WaitlistClient.tsx + page.tsx + /api/waitlist routes. 2026-03-29"
+
+  - id: TC-090
+    title: "Interactive signal quiz — /quiz gamified 5-question 'What kind of trader are you?' that ends with a recommended TradeClaw setup + star CTA"
+    status: done
+    owner: pm-tradeclaw
+    notes: "Complete: QuizClient.tsx (5 questions, 4 profiles, recommended config, star CTA, share buttons, localStorage). Build passes 135 pages. Committed 9844eaba. 2026-03-29"
+
+  - id: TC-091
+    title: "GitHub README video thumbnail — replace static banner with a YouTube-style click-to-play image linking to a Loom/YouTube demo video placeholder for credibility"
     status: pending
     owner: pm-tradeclaw
     notes: ""
 
-next_actions:
-  - "pm-tradeclaw: TC-047 done. TC-048 in-progress (npx tradeclaw-demo)."
-  - "Phase 10 tasks TC-049 through TC-053 defined for next runs."
+  - id: TC-092
+    title: "/api/widget endpoint + embeddable portfolio tracker — show live P&L from paper trading in any external site as a badge or card"
+    status: pending
+    owner: pm-tradeclaw
+    notes: ""
+
+  - id: TC-093
+    title: "TradeClaw Discord bot — bot.js that posts live signals to a Discord server on demand + slash commands (/signal, /leaderboard, /health) + invite link on site"
+    status: pending
+    owner: pm-tradeclaw
+    notes: ""

@@ -2,37 +2,39 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Radio, BarChart2, Briefcase, Bot, Wrench, Puzzle, Rocket } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const FEATURES = [
+const FEATURES: Array<{ icon: LucideIcon; title: string; desc: string }> = [
   {
-    emoji: '📡',
+    icon: Radio,
     title: 'Real-time Signals',
     desc: 'RSI, MACD, EMA-20/50/200, Bollinger Bands — multi-indicator confluence scoring across 12 forex, crypto & metal pairs.',
   },
   {
-    emoji: '📊',
+    icon: BarChart2,
     title: 'Backtesting Engine',
     desc: 'Test strategies against historical data. Win rate, profit factor, Sharpe ratio, max drawdown — all computed client-side.',
   },
   {
-    emoji: '💼',
+    icon: Briefcase,
     title: 'Paper Trading',
     desc: 'Simulate trades on live prices with a virtual portfolio. Track open P&L, equity curve, and performance stats in real time.',
   },
   {
-    emoji: '🤖',
+    icon: Bot,
     title: 'Telegram Bot',
     desc: 'Subscribe to real-time buy/sell alerts in your Telegram chat. Filter by pair and minimum confidence — no app required.',
   },
   {
-    emoji: '🔧',
+    icon: Wrench,
     title: 'Strategy Builder',
     desc: 'Drag-and-drop visual composer for custom indicator logic. Export strategies as JSON and run instant backtests.',
   },
   {
-    emoji: '🧩',
+    icon: Puzzle,
     title: 'Plugin System',
     desc: 'Write custom indicators in JavaScript — VWAP, ATR, OBV, Ichimoku. Sandboxed execution with live test runner.',
   },
@@ -223,7 +225,7 @@ export function LaunchClient() {
 
         <div className="relative max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-medium mb-6">
-            <span>🚀</span>
+            <Rocket className="w-4 h-4 inline" />
             Product Hunt Launch
           </div>
 
@@ -270,14 +272,12 @@ export function LaunchClient() {
               href="https://www.producthunt.com/posts/tradeclaw"
               target="_blank"
               rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-800 border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=tradeclaw&theme=dark"
-                alt="TradeClaw — Product Hunt"
-                width={250}
-                height={54}
-              />
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M13.604 8.4h-3.405V12h3.405c.996 0 1.801-.805 1.801-1.8S14.6 8.4 13.604 8.4zM12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm1.604 14.4h-3.405V18H7.8V6h5.804c2.319 0 4.2 1.881 4.2 4.2s-1.881 4.2-4.2 4.2z" />
+              </svg>
+              View on Product Hunt
             </a>
           </div>
         </div>
@@ -296,7 +296,7 @@ export function LaunchClient() {
               key={f.title}
               className="bg-[var(--bg-card)] border border-[var(--border)] hover:border-emerald-500/30 rounded-2xl p-5 transition-all duration-200"
             >
-              <div className="text-2xl mb-3">{f.emoji}</div>
+              <div className="mb-3"><f.icon className="w-6 h-6 text-emerald-400" /></div>
               <div className="text-sm font-semibold text-[var(--foreground)] mb-2">{f.title}</div>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{f.desc}</p>
             </div>

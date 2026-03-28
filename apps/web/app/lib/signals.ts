@@ -32,6 +32,8 @@ export interface IndicatorSummary {
   stochastic: { k: number; d: number; signal: 'oversold' | 'neutral' | 'overbought' };
   support: number[];
   resistance: number[];
+  adx?: { value: number; trending: boolean; plusDI: number; minusDI: number };
+  volume?: { current: number; average: number; ratio: number; confirmed: boolean };
 }
 
 // Symbol configurations with current market prices (Mar 2026)
@@ -249,7 +251,14 @@ async function generateRealSignals(
     // Calculate indicators and generate signals (generateSignalsFromTA returns [] for synthetic)
     const indicators = calculateAllIndicators(data.candles);
     const signalSource = data.source === 'synthetic' ? 'synthetic' : 'real';
-    const realSignals = generateSignalsFromTA(sym.symbol, indicators, timeframe, signalSource);
+    const signalTimestamp = data.candles[data.candles.length - 1]?.timestamp ?? Date.now();
+    const realSignals = generateSignalsFromTA(
+      sym.symbol,
+      indicators,
+      timeframe,
+      signalSource,
+      signalTimestamp,
+    );
 
     for (const sig of realSignals) {
       sig.source = 'real';
@@ -258,7 +267,6 @@ async function generateRealSignals(
 
     signals.push(...realSignals);
   }
-
   return { signals, syntheticSymbols };
 }
 
@@ -292,10 +300,17 @@ export async function getSignals(params: {
   const allSyntheticSymbols = new Set<string>();
 
   try {
-    for (const tf of timeframesToCheck) {
-      const { signals, syntheticSymbols } = await generateRealSignals(symbols, tf);
-      allSignals.push(...signals);
-      for (const s of syntheticSymbols) allSyntheticSymbols.add(s);
+    const settled = await Promise.allSettled(
+      timeframesToCheck.map(async (tf) => {
+        const result = await generateRealSignals(symbols, tf);
+        return { timeframe: tf, ...result };
+      }),
+    );
+
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+      allSignals.push(...result.value.signals);
+      for (const s of result.value.syntheticSymbols) allSyntheticSymbols.add(s);
     }
   } catch {
     // TA engine crashed — return empty rather than misleading random signals

@@ -1,14 +1,15 @@
 /**
- * Technical Analysis Engine — pure math, zero dependencies
- * All standard TA indicators implemented from scratch
+ * Technical Analysis Engine — pure math, hand-rolled + trading-signals for ADX
+ * All standard TA indicators implemented from scratch except ADX (uses library)
  */
 
-import type { OHLCV } from './ohlcv';
+import type { OHLCV } from "./ohlcv";
+import { ADX as LibADX } from "trading-signals";
 
 // ─── Result Types ────────────────────────────────────────────
 
 export interface RSIResult {
-  values: number[];  // RSI values for each candle (NaN for insufficient data)
+  values: number[]; // RSI values for each candle (NaN for insufficient data)
   current: number;
 }
 
@@ -40,15 +41,33 @@ export interface StochasticResult {
   current: { k: number; d: number };
 }
 
+export interface ADXResult {
+  adx: number[]; // ADX values (NaN for insufficient data)
+  plusDI: number[];
+  minusDI: number[];
+  current: { adx: number; plusDI: number; minusDI: number };
+}
+
+export interface VolumeResult {
+  sma: number[]; // Volume SMA values
+  currentVolume: number;
+  currentSMA: number;
+  ratio: number; // currentVolume / currentSMA (>1 = above average)
+  isSynthetic: boolean; // true if volume data looks synthetic/unreliable
+}
+
 export interface AllIndicators {
   rsi: RSIResult;
   macd: MACDResult;
   ema: EMAResult;
   bollinger: BollingerResult;
   stochastic: StochasticResult;
+  adx: ADXResult;
+  volume: VolumeResult;
   closes: number[];
   highs: number[];
   lows: number[];
+  volumes: number[];
 }
 
 // ─── Helper Functions ────────────────────────────────────────
@@ -108,7 +127,7 @@ function calcSMA(data: number[], period: number): number[] {
  */
 export function calculateRSI(closes: number[], period: number = 14): RSIResult {
   const values: number[] = new Array(closes.length).fill(NaN);
-  
+
   if (closes.length < period + 1) {
     return { values, current: NaN };
   }
@@ -154,7 +173,7 @@ export function calculateRSI(closes: number[], period: number = 14): RSIResult {
     }
   }
 
-  const lastValid = values.filter(v => !isNaN(v));
+  const lastValid = values.filter((v) => !isNaN(v));
   return {
     values,
     current: lastValid.length > 0 ? lastValid[lastValid.length - 1] : NaN,
@@ -188,7 +207,7 @@ export function calculateMACD(
   }
 
   // Signal line = EMA of MACD line
-  const validMacd = macdLine.filter(v => !isNaN(v));
+  const validMacd = macdLine.filter((v) => !isNaN(v));
   const signalEma = calcEMA(validMacd, signalPeriod);
 
   // Map signal back to full array
@@ -209,9 +228,9 @@ export function calculateMACD(
     }
   }
 
-  const lastMacd = macdLine.filter(v => !isNaN(v));
-  const lastSignal = signalLine.filter(v => !isNaN(v));
-  const lastHist = histogram.filter(v => !isNaN(v));
+  const lastMacd = macdLine.filter((v) => !isNaN(v));
+  const lastSignal = signalLine.filter((v) => !isNaN(v));
+  const lastHist = histogram.filter((v) => !isNaN(v));
 
   return {
     macdLine,
@@ -235,9 +254,9 @@ export function calculateEMAs(closes: number[]): EMAResult {
   const ema50 = calcEMA(closes, 50);
   const ema200 = calcEMA(closes, 200);
 
-  const last20 = ema20.filter(v => !isNaN(v));
-  const last50 = ema50.filter(v => !isNaN(v));
-  const last200 = ema200.filter(v => !isNaN(v));
+  const last20 = ema20.filter((v) => !isNaN(v));
+  const last50 = ema50.filter((v) => !isNaN(v));
+  const last200 = ema200.filter((v) => !isNaN(v));
 
   return {
     ema20,
@@ -280,13 +299,14 @@ export function calculateBollingerBands(
 
     upper[i] = middle[i] + stdDevMultiplier * stdDev;
     lower[i] = middle[i] - stdDevMultiplier * stdDev;
-    bandwidth[i] = middle[i] > 0 ? ((upper[i] - lower[i]) / middle[i]) * 100 : 0;
+    bandwidth[i] =
+      middle[i] > 0 ? ((upper[i] - lower[i]) / middle[i]) * 100 : 0;
   }
 
-  const lastUpper = upper.filter(v => !isNaN(v));
-  const lastMiddle = middle.filter(v => !isNaN(v));
-  const lastLower = lower.filter(v => !isNaN(v));
-  const lastBw = bandwidth.filter(v => !isNaN(v));
+  const lastUpper = upper.filter((v) => !isNaN(v));
+  const lastMiddle = middle.filter((v) => !isNaN(v));
+  const lastLower = lower.filter((v) => !isNaN(v));
+  const lastBw = bandwidth.filter((v) => !isNaN(v));
 
   return {
     upper,
@@ -337,7 +357,7 @@ export function calculateStochastic(
   }
 
   // Smooth %K with SMA
-  const validRawK = rawK.filter(v => !isNaN(v));
+  const validRawK = rawK.filter((v) => !isNaN(v));
   const smoothedK = calcSMA(validRawK, kSmooth);
 
   // Map back to full array
@@ -351,7 +371,7 @@ export function calculateStochastic(
   }
 
   // %D = SMA of %K
-  const validK = k.filter(v => !isNaN(v));
+  const validK = k.filter((v) => !isNaN(v));
   const dSma = calcSMA(validK, dPeriod);
 
   const d: number[] = new Array(len).fill(NaN);
@@ -363,8 +383,8 @@ export function calculateStochastic(
     }
   }
 
-  const lastK = k.filter(v => !isNaN(v));
-  const lastD = d.filter(v => !isNaN(v));
+  const lastK = k.filter((v) => !isNaN(v));
+  const lastD = d.filter((v) => !isNaN(v));
 
   return {
     k,
@@ -389,10 +409,10 @@ export function findSwingLevels(
   const startIdx = Math.max(0, highs.length - lookback);
   const recentHighs = highs.slice(startIdx);
   const recentLows = lows.slice(startIdx);
-  
+
   const swingHighs: number[] = [];
   const swingLows: number[] = [];
-  
+
   for (let i = 2; i < recentHighs.length - 2; i++) {
     // Swing high: higher than 2 candles on each side
     if (
@@ -403,7 +423,7 @@ export function findSwingLevels(
     ) {
       swingHighs.push(recentHighs[i]);
     }
-    
+
     // Swing low: lower than 2 candles on each side
     if (
       recentLows[i] < recentLows[i - 1] &&
@@ -414,15 +434,109 @@ export function findSwingLevels(
       swingLows.push(recentLows[i]);
     }
   }
-  
+
   // Sort and take top 2 closest to current price
   swingHighs.sort((a, b) => b - a);
   swingLows.sort((a, b) => a - b);
-  
+
   return {
     support: swingLows.slice(0, 3),
     resistance: swingHighs.slice(0, 3),
   };
+}
+
+// ─── ADX (Average Directional Index) ────────────────────────
+
+/**
+ * Calculate ADX using the trading-signals library (Wilder smoothing).
+ * ADX measures trend strength: <20 weak, 20-25 emerging, >25 trending, >40 strong trend.
+ * +DI/-DI indicate trend direction.
+ */
+export function calculateADX(
+  highs: number[],
+  lows: number[],
+  closes: number[],
+  period: number = 14,
+): ADXResult {
+  const len = closes.length;
+  const adxValues: number[] = new Array(len).fill(NaN);
+  const plusDIValues: number[] = new Array(len).fill(NaN);
+  const minusDIValues: number[] = new Array(len).fill(NaN);
+
+  if (len < period * 2 + 1) {
+    return {
+      adx: adxValues,
+      plusDI: plusDIValues,
+      minusDI: minusDIValues,
+      current: { adx: NaN, plusDI: NaN, minusDI: NaN },
+    };
+  }
+
+  try {
+    const adxIndicator = new LibADX(period);
+
+    for (let i = 0; i < len; i++) {
+      adxIndicator.update({ high: highs[i], low: lows[i], close: closes[i] }, false);
+
+      try {
+        const adxVal = adxIndicator.getResult();
+        adxValues[i] = Number(adxVal);
+        plusDIValues[i] = Number(adxIndicator.pdi);
+        minusDIValues[i] = Number(adxIndicator.mdi);
+      } catch {
+        // Not enough data yet — keep NaN
+      }
+    }
+  } catch {
+    // Library error — return NaN values
+  }
+
+  const lastAdx = adxValues.filter((v) => !isNaN(v));
+  const lastPlus = plusDIValues.filter((v) => !isNaN(v));
+  const lastMinus = minusDIValues.filter((v) => !isNaN(v));
+
+  return {
+    adx: adxValues,
+    plusDI: plusDIValues,
+    minusDI: minusDIValues,
+    current: {
+      adx: lastAdx.length > 0 ? lastAdx[lastAdx.length - 1] : NaN,
+      plusDI: lastPlus.length > 0 ? lastPlus[lastPlus.length - 1] : NaN,
+      minusDI: lastMinus.length > 0 ? lastMinus[lastMinus.length - 1] : NaN,
+    },
+  };
+}
+
+// ─── Volume SMA ─────────────────────────────────────────────
+
+/**
+ * Calculate Volume SMA and determine if volume data is synthetic.
+ * Synthetic detection: if all volumes are within 10% of each other or all zero.
+ */
+export function calculateVolumeSMA(volumes: number[], period: number = 20): VolumeResult {
+  const sma = calcSMA(volumes, period);
+  const currentVolume = volumes.length > 0 ? volumes[volumes.length - 1] : 0;
+  const validSMA = sma.filter((v) => !isNaN(v));
+  const currentSMA = validSMA.length > 0 ? validSMA[validSMA.length - 1] : 0;
+
+  // Detect synthetic/unreliable volume data
+  let isSynthetic = false;
+  if (volumes.length > 0) {
+    const nonZero = volumes.filter((v) => v > 0);
+    if (nonZero.length === 0) {
+      isSynthetic = true;
+    } else {
+      const mean = nonZero.reduce((s, v) => s + v, 0) / nonZero.length;
+      if (mean > 0) {
+        const allClose = nonZero.every((v) => Math.abs(v - mean) / mean < 0.1);
+        isSynthetic = allClose;
+      }
+    }
+  }
+
+  const ratio = currentSMA > 0 ? currentVolume / currentSMA : 0;
+
+  return { sma, currentVolume, currentSMA, ratio, isSynthetic };
 }
 
 // ─── Main Entry Point ────────────────────────────────────────
@@ -431,9 +545,10 @@ export function findSwingLevels(
  * Calculate all technical indicators from OHLCV data
  */
 export function calculateAllIndicators(candles: OHLCV[]): AllIndicators {
-  const closes = candles.map(c => c.close);
-  const highs = candles.map(c => c.high);
-  const lows = candles.map(c => c.low);
+  const closes = candles.map((c) => c.close);
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+  const volumes = candles.map((c) => c.volume);
 
   return {
     rsi: calculateRSI(closes),
@@ -441,8 +556,11 @@ export function calculateAllIndicators(candles: OHLCV[]): AllIndicators {
     ema: calculateEMAs(closes),
     bollinger: calculateBollingerBands(closes),
     stochastic: calculateStochastic(highs, lows, closes),
+    adx: calculateADX(highs, lows, closes),
+    volume: calculateVolumeSMA(volumes),
     closes,
     highs,
     lows,
+    volumes,
   };
 }

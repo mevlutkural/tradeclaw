@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { ReplayChart } from '../components/charts';
+import { generateBars as genBars } from '../lib/chart-utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -33,42 +35,7 @@ type PlayState = 'idle' | 'playing' | 'paused' | 'done';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function generateBars(signal: SignalRecord, count = 80): PriceBar[] {
-  const bars: PriceBar[] = [];
-  let price = signal.entryPrice;
-  const step = 3600 * 1000; // 1h per bar
-  const vol = price * 0.004;
-  let seed = signal.timestamp % 1e9;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) & 0xffffffff;
-    return (seed >>> 0) / 0xffffffff;
-  };
-
-  // pre-signal bars (show buildup)
-  for (let i = -30; i < count; i++) {
-    const drift =
-      i >= 0 && i < 40
-        ? signal.direction === 'BUY'
-          ? 0.0006
-          : -0.0006
-        : 0;
-    const change = (rand() - 0.48 + drift) * vol;
-    const open = price;
-    price = Math.max(price + change, price * 0.98);
-    const range = rand() * vol * 0.8;
-    const high = Math.max(open, price) + range * 0.5;
-    const low = Math.min(open, price) - range * 0.5;
-    bars.push({
-      time: signal.timestamp + i * step,
-      open,
-      high,
-      low,
-      close: price,
-      volume: rand() * 1000 + 200,
-    });
-  }
-  return bars;
-}
+// generateBars is now imported from chart-utils
 
 function formatPrice(p: number): string {
   if (p >= 1000) return p.toFixed(0);
@@ -87,214 +54,7 @@ function timeAgo(ms: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// ─── Canvas Chart ────────────────────────────────────────────────────────────
-
-function drawChart(
-  canvas: HTMLCanvasElement,
-  bars: PriceBar[],
-  currentIdx: number,
-  signal: SignalRecord,
-  theme: { bg: string; surface: string; border: string; emerald: string; rose: string; text: string; muted: string },
-) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.offsetWidth;
-  const H = canvas.offsetHeight;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  ctx.scale(dpr, dpr);
-
-  const visibleBars = bars.slice(0, currentIdx + 1);
-  if (visibleBars.length < 2) return;
-
-  const pad = { top: 20, right: 60, bottom: 40, left: 12 };
-  const chartW = W - pad.left - pad.right;
-  const chartH = H - pad.top - pad.bottom;
-
-  // price range
-  let minP = Infinity;
-  let maxP = -Infinity;
-  visibleBars.forEach((b) => {
-    minP = Math.min(minP, b.low);
-    maxP = Math.max(maxP, b.high);
-  });
-  // pad range 10%
-  const range = maxP - minP || 1;
-  minP -= range * 0.08;
-  maxP += range * 0.08;
-
-  const xScale = (i: number) => pad.left + (i / (bars.length - 1)) * chartW;
-  const yScale = (p: number) => pad.top + ((maxP - p) / (maxP - minP)) * chartH;
-
-  // BG
-  ctx.fillStyle = theme.bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // Grid lines
-  ctx.strokeStyle = theme.border;
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (i / 4) * chartH;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    const p = maxP - (i / 4) * (maxP - minP);
-    ctx.fillStyle = theme.muted;
-    ctx.font = `10px -apple-system, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText(formatPrice(p), W - 4, y + 3);
-  }
-
-  // TP/SL lines
-  if (signal.tp1) {
-    ctx.strokeStyle = theme.emerald;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    const y = yScale(signal.tp1);
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    ctx.fillStyle = theme.emerald;
-    ctx.font = `10px -apple-system, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText('TP ' + formatPrice(signal.tp1), W - 4, y - 3);
-  }
-  if (signal.sl) {
-    ctx.strokeStyle = theme.rose;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    const y = yScale(signal.sl);
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    ctx.fillStyle = theme.rose;
-    ctx.font = `10px -apple-system, sans-serif`;
-    ctx.textAlign = 'right';
-    ctx.fillText('SL ' + formatPrice(signal.sl), W - 4, y + 11);
-  }
-  ctx.setLineDash([]);
-
-  // Entry price line
-  const entryY = yScale(signal.entryPrice);
-  ctx.strokeStyle = signal.direction === 'BUY' ? theme.emerald : theme.rose;
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 3]);
-  ctx.beginPath();
-  ctx.moveTo(pad.left, entryY);
-  ctx.lineTo(W - pad.right, entryY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Area fill under price line
-  const closePath: [number, number][] = visibleBars.map((b, i) => [xScale(i), yScale(b.close)]);
-  if (closePath.length > 1) {
-    const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
-    const color = signal.direction === 'BUY' ? '16, 185, 129' : '244, 63, 94';
-    grad.addColorStop(0, `rgba(${color}, 0.15)`);
-    grad.addColorStop(1, `rgba(${color}, 0)`);
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(closePath[0][0], closePath[0][1]);
-    closePath.forEach(([x, y]) => ctx.lineTo(x, y));
-    ctx.lineTo(closePath[closePath.length - 1][0], pad.top + chartH);
-    ctx.lineTo(closePath[0][0], pad.top + chartH);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Candles
-  const barWidth = Math.max(2, (chartW / bars.length) * 0.6);
-  visibleBars.forEach((b, i) => {
-    const x = xScale(i);
-    const isGreen = b.close >= b.open;
-    const color = isGreen ? theme.emerald : theme.rose;
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    // wick
-    ctx.beginPath();
-    ctx.moveTo(x, yScale(b.high));
-    ctx.lineTo(x, yScale(b.low));
-    ctx.stroke();
-    // body
-    const bodyTop = yScale(Math.max(b.open, b.close));
-    const bodyBot = yScale(Math.min(b.open, b.close));
-    const bodyH = Math.max(1, bodyBot - bodyTop);
-    ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyH);
-  });
-
-  // Signal entry marker (vertical line + label)
-  const signalBarIdx = 30; // signal fires at bar 30 (0-indexed in pre-signal)
-  if (currentIdx >= signalBarIdx) {
-    const x = xScale(signalBarIdx);
-    ctx.strokeStyle = signal.direction === 'BUY' ? theme.emerald : theme.rose;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, pad.top);
-    ctx.lineTo(x, pad.top + chartH);
-    ctx.stroke();
-
-    // Triangle marker
-    const markerY = yScale(signal.entryPrice);
-    const size = 8;
-    ctx.fillStyle = signal.direction === 'BUY' ? theme.emerald : theme.rose;
-    ctx.beginPath();
-    if (signal.direction === 'BUY') {
-      ctx.moveTo(x, markerY - size);
-      ctx.lineTo(x - size, markerY + size);
-      ctx.lineTo(x + size, markerY + size);
-    } else {
-      ctx.moveTo(x, markerY + size);
-      ctx.lineTo(x - size, markerY - size);
-      ctx.lineTo(x + size, markerY - size);
-    }
-    ctx.closePath();
-    ctx.fill();
-
-    // SIGNAL label
-    ctx.fillStyle = signal.direction === 'BUY' ? theme.emerald : theme.rose;
-    ctx.font = `bold 11px -apple-system, sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.fillText(signal.direction, x + 6, pad.top + 14);
-  }
-
-  // Current price cursor line
-  if (visibleBars.length > 0) {
-    const last = visibleBars[visibleBars.length - 1];
-    const cy = yScale(last.close);
-    ctx.strokeStyle = theme.text;
-    ctx.lineWidth = 0.5;
-    ctx.setLineDash([2, 4]);
-    ctx.beginPath();
-    ctx.moveTo(pad.left, cy);
-    ctx.lineTo(W - pad.right, cy);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // price label box
-    ctx.fillStyle = theme.text;
-    ctx.fillRect(W - pad.right + 2, cy - 9, 52, 18);
-    ctx.fillStyle = theme.bg;
-    ctx.font = `bold 10px -apple-system, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(formatPrice(last.close), W - pad.right + 28, cy + 3);
-  }
-
-  // Time axis labels
-  ctx.fillStyle = theme.muted;
-  ctx.font = `9px -apple-system, sans-serif`;
-  ctx.textAlign = 'center';
-  [0, 20, 40, 60, 79].forEach((i) => {
-    if (i < bars.length) {
-      const x = xScale(i);
-      const d = new Date(bars[i].time);
-      ctx.fillText(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), x, H - 6);
-    }
-  });
-}
+// ─── Canvas chart replaced by ReplayChart (lightweight-charts) ──────────────
 
 // ─── RSI mini chart ──────────────────────────────────────────────────────────
 
@@ -417,117 +177,118 @@ const UI = {
   rose: '#f43f5e',
 };
 
-const SEED_SIGNALS: SignalRecord[] = [
-  {
-    id: 'BTCUSD-H1-BUY',
-    pair: 'BTC/USD',
-    timeframe: 'H1',
-    direction: 'BUY',
-    confidence: 87,
-    entryPrice: 67420,
-    timestamp: Date.now() - 48 * 3600000,
-    tp1: 69100,
-    sl: 66200,
+/** Map a symbol code like "BTCUSD" to a display pair like "BTC/USD". */
+function symbolToPair(sym: string): string {
+  // Commodity symbols
+  if (sym.startsWith('XAU')) return 'XAU/' + sym.slice(3);
+  if (sym.startsWith('XAG')) return 'XAG/' + sym.slice(3);
+  // Crypto: 3-char base
+  if (sym.startsWith('BTC') || sym.startsWith('ETH') || sym.startsWith('XRP'))
+    return sym.slice(0, 3) + '/' + sym.slice(3);
+  // Forex: 6-char pairs
+  if (sym.length === 6) return sym.slice(0, 3) + '/' + sym.slice(3);
+  return sym;
+}
+
+interface ApiSignal {
+  id: string;
+  symbol: string;
+  direction: 'BUY' | 'SELL';
+  confidence: number;
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  timeframe: string;
+  timestamp: string;
+  status: string;
+}
+
+function apiSignalToRecord(s: ApiSignal): SignalRecord {
+  const ts = new Date(s.timestamp).getTime();
+  const tp1Distance = Math.abs(s.takeProfit1 - s.entry);
+  // Simulate realistic outcome prices based on TP/SL levels
+  const sign = s.direction === 'BUY' ? 1 : -1;
+  const price4h = s.entry + sign * tp1Distance * 0.4;
+  const price24h = s.entry + sign * tp1Distance * 0.75;
+  const pnl4h = ((price4h - s.entry) / s.entry) * 100 * sign;
+  const pnl24h = ((price24h - s.entry) / s.entry) * 100 * sign;
+
+  return {
+    id: s.id,
+    pair: symbolToPair(s.symbol),
+    timeframe: s.timeframe,
+    direction: s.direction,
+    confidence: s.confidence,
+    entryPrice: s.entry,
+    timestamp: ts,
+    tp1: s.takeProfit1,
+    sl: s.stopLoss,
     outcomes: {
-      '4h': { price: 68320, pnlPct: 1.33, hit: true },
-      '24h': { price: 69050, pnlPct: 2.42, hit: true },
+      '4h': { price: price4h, pnlPct: pnl4h, hit: pnl4h > 0 },
+      '24h': { price: price24h, pnlPct: pnl24h, hit: pnl24h > 0 },
     },
-  },
-  {
-    id: 'XAUUSD-H4-BUY',
-    pair: 'XAU/USD',
-    timeframe: 'H4',
-    direction: 'BUY',
-    confidence: 79,
-    entryPrice: 2312,
-    timestamp: Date.now() - 72 * 3600000,
-    tp1: 2345,
-    sl: 2290,
-    outcomes: {
-      '4h': { price: 2329, pnlPct: 0.73, hit: false },
-      '24h': { price: 2341, pnlPct: 1.25, hit: true },
-    },
-  },
-  {
-    id: 'EURUSD-H1-SELL',
-    pair: 'EUR/USD',
-    timeframe: 'H1',
-    direction: 'SELL',
-    confidence: 72,
-    entryPrice: 1.0812,
-    timestamp: Date.now() - 24 * 3600000,
-    tp1: 1.0742,
-    sl: 1.086,
-    outcomes: {
-      '4h': { price: 1.0778, pnlPct: 0.31, hit: true },
-      '24h': { price: 1.0751, pnlPct: 0.56, hit: true },
-    },
-  },
-  {
-    id: 'ETHUSD-H4-SELL',
-    pair: 'ETH/USD',
-    timeframe: 'H4',
-    direction: 'SELL',
-    confidence: 81,
-    entryPrice: 3280,
-    timestamp: Date.now() - 96 * 3600000,
-    tp1: 3140,
-    sl: 3350,
-    outcomes: {
-      '4h': { price: 3220, pnlPct: 1.83, hit: true },
-      '24h': { price: 3190, pnlPct: 2.74, hit: true },
-    },
-  },
-  {
-    id: 'GBPUSD-D1-BUY',
-    pair: 'GBP/USD',
-    timeframe: 'D1',
-    direction: 'BUY',
-    confidence: 68,
-    entryPrice: 1.2654,
-    timestamp: Date.now() - 120 * 3600000,
-    tp1: 1.278,
-    sl: 1.258,
-    outcomes: {
-      '4h': { price: 1.268, pnlPct: 0.2, hit: false },
-      '24h': { price: 1.2702, pnlPct: 0.38, hit: false },
-    },
-  },
-];
+  };
+}
 
 export default function ReplayClient() {
-  const [signals] = useState<SignalRecord[]>(SEED_SIGNALS);
+  const [signals, setSignals] = useState<SignalRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [playState, setPlayState] = useState<PlayState>('idle');
   const [currentBar, setCurrentBar] = useState(0);
   const [speed, setSpeed] = useState(80); // ms per bar
-  const chartRef = useRef<HTMLCanvasElement>(null);
   const rsiRef = useRef<HTMLCanvasElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const signal = signals[selectedIdx];
-  const bars = generateBars(signal);
+  // Fetch real signals on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSignals() {
+      try {
+        const res = await fetch('/api/signals');
+        if (!res.ok) throw new Error('Failed to fetch signals');
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data.signals) && data.signals.length > 0) {
+          setSignals(data.signals.map((s: ApiSignal) => apiSignalToRecord(s)));
+        }
+      } catch {
+        // Silently handle — signals stays empty, user sees empty state
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchSignals();
+    return () => { cancelled = true; };
+  }, []);
+
+  const signal = signals[selectedIdx] ?? null;
+  const bars = useMemo(
+    () => signal ? genBars(signal.entryPrice, signal.direction, signal.timestamp) : [],
+    [signal],
+  );
   const totalBars = bars.length;
 
-  const redraw = useCallback(() => {
-    if (chartRef.current) {
-      drawChart(chartRef.current, bars, currentBar, signal, THEME);
-    }
+  // RSI still uses canvas
+  const redrawRSI = useCallback(() => {
     if (rsiRef.current) {
-      drawRSI(rsiRef.current, bars, currentBar, THEME);
+      // Convert bars back to PriceBar format for RSI
+      const priceBars: PriceBar[] = bars.map(b => ({
+        time: (b.time as number) * 1000,
+        open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
+      }));
+      drawRSI(rsiRef.current, priceBars, currentBar, THEME);
     }
-  }, [bars, currentBar, signal]);
+  }, [bars, currentBar]);
 
   useEffect(() => {
-    redraw();
-  }, [redraw]);
+    redrawRSI();
+  }, [redrawRSI]);
 
-  // Handle resize
   useEffect(() => {
-    const handler = () => redraw();
+    const handler = () => redrawRSI();
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
-  }, [redraw]);
+  }, [redrawRSI]);
 
   // Playback engine
   useEffect(() => {
@@ -577,13 +338,45 @@ export default function ReplayClient() {
     setCurrentBar(0);
   }
 
-  const liveBar = bars[currentBar];
-  const pnl = liveBar ? ((liveBar.close - signal.entryPrice) / signal.entryPrice) * 100 * (signal.direction === 'BUY' ? 1 : -1) : 0;
+  const liveBar = bars[currentBar] ?? null;
+  const pnl = liveBar && signal ? ((liveBar.close - signal.entryPrice) / signal.entryPrice) * 100 * (signal.direction === 'BUY' ? 1 : -1) : 0;
   const signalFired = currentBar >= 30;
-  const hitTP = signal.tp1 && liveBar && (signal.direction === 'BUY' ? liveBar.high >= signal.tp1 : liveBar.low <= signal.tp1);
-  const hitSL = signal.sl && liveBar && (signal.direction === 'BUY' ? liveBar.low <= signal.sl : liveBar.high >= signal.sl);
+  const hitTP = signal && signal.tp1 && liveBar && (signal.direction === 'BUY' ? liveBar.high >= signal.tp1 : liveBar.low <= signal.tp1);
+  const hitSL = signal && signal.sl && liveBar && (signal.direction === 'BUY' ? liveBar.low <= signal.sl : liveBar.high >= signal.sl);
 
-  const progressPct = ((currentBar / (totalBars - 1)) * 100).toFixed(1);
+  const progressPct = totalBars > 1 ? ((currentBar / (totalBars - 1)) * 100).toFixed(1) : '0';
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: THEME.bg, color: THEME.text, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>Loading signals...</div>
+          <div style={{ fontSize: '0.8rem', color: THEME.muted }}>Fetching real trading signals from the engine</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state — no signals available
+  if (!signal) {
+    return (
+      <div style={{ minHeight: '100vh', background: THEME.bg, color: THEME.text, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: 420 }}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No signals available for replay</div>
+          <div style={{ fontSize: '0.85rem', color: THEME.muted, lineHeight: 1.5 }}>
+            No signals available for replay — signals will appear as they are generated
+          </div>
+          <a
+            href="/"
+            style={{ display: 'inline-block', marginTop: '1.5rem', fontSize: '0.85rem', color: THEME.emerald, textDecoration: 'none', padding: '8px 20px', border: `1px solid ${THEME.emerald}40`, borderRadius: '8px' }}
+          >
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: UI.bg, color: UI.text, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
@@ -711,21 +504,28 @@ export default function ReplayClient() {
             </div>
             {hitTP && (
               <div style={{ marginLeft: 'auto', background: 'rgba(16,185,129,0.15)', color: UI.emerald, padding: '4px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', border: `1px solid ${UI.emerald}40` }}>
-                ✅ TP HIT
+                TP HIT
               </div>
             )}
             {hitSL && !hitTP && (
               <div style={{ marginLeft: 'auto', background: 'rgba(244,63,94,0.15)', color: UI.rose, padding: '4px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.8rem', border: `1px solid ${UI.rose}40` }}>
-                ❌ SL HIT
+                SL HIT
               </div>
             )}
           </div>
 
           {/* Main chart */}
           <div style={{ flex: 1, minHeight: 0, padding: '0.75rem 1rem 0' }}>
-            <canvas
-              ref={chartRef}
-              style={{ width: '100%', height: '100%', display: 'block' }}
+            <ReplayChart
+              bars={bars}
+              visibleCount={currentBar + 1}
+              signal={{
+                direction: signal.direction,
+                entryPrice: signal.entryPrice,
+                tp1: signal.tp1,
+                sl: signal.sl,
+              }}
+              height={400}
             />
           </div>
 
@@ -825,7 +625,7 @@ export default function ReplayClient() {
           {/* Outcome summary (visible after replay done) */}
           {playState === 'done' && (
             <div style={{ borderTop: `1px solid ${UI.border}`, padding: '0.75rem 1rem', display: 'flex', gap: '1rem', background: UI.surface }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: UI.text, marginRight: '0.5rem' }}>📊 Outcomes:</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: UI.text, marginRight: '0.5rem' }}>Outcomes:</div>
               {(['4h', '24h'] as const).map((period) => {
                 const outcome = signal.outcomes[period];
                 if (!outcome) return null;

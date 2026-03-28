@@ -121,12 +121,13 @@ function fmtPrice(n: number): string {
 function PairDetailPanel({ pair, onClose }: { pair: string; onClose: () => void }) {
   const [data, setData] = useState<PairDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchedAt, setFetchedAt] = useState(0);
 
   useEffect(() => {
-    setLoading(true);
+    setTimeout(() => setLoading(true), 0);
     fetch(`/api/leaderboard?pair=${pair}`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
+      .then(d => { setData(d); setFetchedAt(Date.now()); setLoading(false); })
       .catch(() => setLoading(false));
   }, [pair]);
 
@@ -203,7 +204,7 @@ function PairDetailPanel({ pair, onClose }: { pair: string; onClose: () => void 
                             : <span className="text-red-400">{r.outcomes['24h'].pnlPct}%</span>}
                         </td>
                         <td className="px-3 py-2 text-right text-[10px] font-mono text-[var(--text-secondary)]">
-                          {fmtAge(Date.now() - r.timestamp)}
+                          {fmtAge(fetchedAt - r.timestamp)}
                         </td>
                       </tr>
                     ))}
@@ -238,6 +239,7 @@ function PairDetailPanel({ pair, onClose }: { pair: string; onClose: () => void 
 export default function LeaderboardClient() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('30d');
   const [sortBy, setSortBy] = useState<SortKey>('hitRate');
   const [sortAsc, setSortAsc] = useState(false);
@@ -245,13 +247,14 @@ export default function LeaderboardClient() {
 
   const fetchData = useCallback(() => {
     setLoading(true);
+    setError(null);
     fetch(`/api/leaderboard?period=${period}&sort=${sortBy}`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: LeaderboardData) => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to load leaderboard data'); setLoading(false); });
   }, [period, sortBy]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { setTimeout(() => fetchData(), 0); }, [fetchData]);
 
   function handleSort(key: SortKey) {
     if (sortBy === key) {
@@ -370,6 +373,12 @@ export default function LeaderboardClient() {
             Share Leaderboard
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200">
+            Failed to load leaderboard data: {error}
+          </div>
+        )}
 
         {/* Table */}
         <div className="glass-card rounded-2xl overflow-x-auto">
